@@ -2,7 +2,6 @@ fs = require 'fs'
 pathutil = require 'path'
 browserify = require 'browserify'
 uglify = require('uglify-js')
-Q = require('q')
 Asset = require('../index').Asset
 
 class exports.BrowserifyAsset extends Asset
@@ -14,15 +13,22 @@ class exports.BrowserifyAsset extends Asset
       @require = options.require
       @debug = options.debug or false
       @compress = options.compress
+      @external = options.external
+      @transform = options.transform
       @prependAsset = options.prepend
       @compress ?= false
+      delimiter = '\n;\n'
       @extensionHandlers = options.extensionHandlers or []
       @agent = browserify watch: false, debug: @debug
       for handler in @extensionHandlers
           @agent.register(handler.ext, handler.handler)
-      @agent.addEntry @filename
+      @agent.require @filename
       @agent.require @require if @require
-      delimiter = '\n;\n'
+
+      @agent.external ext for ext in @external if @external
+      @agent.transform t for t in @transform if @transform
+
+      @agent.transform 'coffeeify' if /.coffee$/.test @filename
 
       if @prependAsset
         promises = []
@@ -37,11 +43,13 @@ class exports.BrowserifyAsset extends Asset
           @finish(contentsArray.join(delimiter) + delimiter)
       else
         @finish('')
-
+      
     finish: (prependContents)->
-      uncompressed = prependContents + @agent.bundle()
-      if @compress is true
-        @contents = uglify.minify(uncompressed, {fromString: true}).code
-        @emit 'created'
-      else
-        @emit 'created', contents: uncompressed 
+      @agent.bundle (error, src) =>
+        # return @emit 'error', error if error?
+        uncompressed = prependContents + src;
+        if @compress is true
+            @contents = uglify.minify(uncompressed, {fromString: true}).code
+            @emit 'created'
+        else
+            @emit 'created', contents: uncompressed
