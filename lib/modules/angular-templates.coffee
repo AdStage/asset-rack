@@ -32,12 +32,13 @@ class exports.AngularTemplatesAsset extends Asset
       path = pathutil.join dirname, file
       stats = fs.statSync path
       if stats.isDirectory()
-          newPrefix = "#{prefix}#{pathutil.basename(path)}#{@separator}"
-          templates = templates.concat @getFileObjects path, newPrefix
+        newPrefix = "#{prefix}#{pathutil.basename(path)}#{@separator}"
+        templates = templates.concat @getFileObjects path, newPrefix
       else
         if file.match(/\.html$/)
           template = fs.readFileSync(path, 'utf8').replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/'/g, '\\\'')
-          templates.push "$templateCache.put('#{path}', '#{template}')"
+          templateCacheDirname = (if @templateCacheDirname then pathutil.join(@templateCacheDirname, file) else "/#{file}").replace(/\.jade/, '.html')
+          templates.push "$templateCache.put('#{templateCacheDirname}', '#{template}')"
         else if file.match(/\.jade$/)
           template = fs.readFileSync(path, 'utf8')
           linker = jade.compile(template, {filename: path});
@@ -51,6 +52,8 @@ class exports.AngularTemplatesAsset extends Asset
                 assets: assets,
                 url: (url)-> @assets[url]
             }
+
+          templateCacheDirname = (if @templateCacheDirname then pathutil.join(@templateCacheDirname, file) else "/#{file}").replace(/\.jade/, '.html')
           compiledTemplate = linker(@assetsMap if @assetsMap).replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/'/g, '\\\'')
-          templates.push("$templateCache.put('" + pathutil.join(@templateCacheDirname, file).replace(/\.jade/, '.html') + "', '" + compiledTemplate + "')")
+          templates.push("$templateCache.put('#{templateCacheDirname}', '#{compiledTemplate}')")
     templates
