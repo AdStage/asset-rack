@@ -3,6 +3,7 @@ pathutil = require 'path'
 browserify = require 'browserify'
 uglify = require('uglify-js')
 Asset = require('../index').Asset
+Q = require('q')
 
 class exports.BrowserifyAsset extends Asset
     mimetype: 'text/javascript'
