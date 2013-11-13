@@ -52,7 +52,7 @@ class exports.BrowserifyAsset extends Asset
         @finish('')
       
     finish: (prependContents)->
-      @agent.bundle (error, src) =>
+      @agent.bundle {debug: @debug}, (error, src) =>
         # return @emit 'error', error if error?
         uncompressed = prependContents + src;
         if @compress is true
@@ -60,3 +60,66 @@ class exports.BrowserifyAsset extends Asset
             @emit 'created'
         else
             @emit 'created', contents: uncompressed
+
+    getInSourceMap: (compiled)->
+      SOURCE_MAP_REGEXP = /\/\/(?:@|#)\s*source(?:Mapping)?URL=data:application\/json;base64,(.+)\n/
+      tail = (string, lineCount)->
+        nextIndex = undefined
+        for line in [lineCount..1]
+          do ->
+            previousIndex = nextIndex
+            nextIndex = string.lastIndexOf('\n', previousIndex - 1)
+        string.substring(nextIndex)
+
+      return if (typeof compiled) != 'string'
+
+      sourceMap = tail(compiled, 5)
+      .match(SOURCE_MAP_REGEXP)
+
+      return if !(sourceMap? && sourceMap[1]?)
+
+      tempfile = '/Users/bwhite/Desktop/temp.map'
+      fs.writeFileSync(tempfile, new Buffer(sourceMap[1],
+        'base64').toString())
+
+      tempfile
+
+    finish: (prependContents)->
+      @agent.bundle
+        debug: @debug
+        , (err, src)=>
+#          return @emit 'error', error if error?
+          uncompressed = prependContents + src
+          #          uncompressed = src
+          if @compress is true
+#            @contents = do =>
+#              toplevel = uglify.parse uncompressed, 
+#                filename: @filename
+#              toplevel.figure_out_scope()
+##              compressed_ast = toplevel #TEMP!!
+#              compressed_ast = toplevel.transform(uglify.Compressor())
+#              compressed_ast.figure_out_scope()
+#              compressed_ast.compute_char_frequency()
+#              compressed_ast.mangle_names()
+#              
+#              source_map = uglify.SourceMap#()
+#                file: @filename,
+#                orig: @getInSourceMap(src)
+#              
+##              compressed_ast.print_to_string
+##                source_map: source_map
+#            
+#              stream = uglify.OutputStream
+#                source_map: source_map
+#              
+#              compressed_ast.print stream
+#              
+#              code = stream.toString()
+            @contents = do =>
+              min = uglify.minify(uncompressed,
+                fromString: true,
+                inSourceMap: @getInSourceMap(src),
+                outSourceMap: 'my-min.map'
+              )#.code
+
+              min.code + "//# sourceMappingURL=data:;base64,#{new Buffer(min.map).toString('base64')}"
