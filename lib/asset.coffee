@@ -8,6 +8,7 @@ pathutil = require 'path'
 fs = require 'fs'
 zlib = require 'zlib'
 mime = require 'mime'
+gaze = require 'gaze'
 {extend} = require './util'
 {EventEmitter} = require 'events'
 
