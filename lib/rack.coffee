@@ -156,6 +156,7 @@ class exports.Rack extends EventEmitter
                 url = asset.getUploadUrl()
                 for key, value of asset.headers
                     headers[key] = value
+                headers['content-length'] = fs.statSync(asset.filename)['size']
                 headers['x-amz-acl'] = 'public-read' if options.provider is 'amazon'
                 clientOptions =
                     container: options.container
@@ -171,6 +172,7 @@ class exports.Rack extends EventEmitter
                     next()
             , (error) =>
                 if error?
+                    console.error "Deployment Error: ", error
                     return next error if next?
                     throw error
                 if options.configFile?
