@@ -144,15 +144,15 @@ class exports.Rack extends EventEmitter
             # at the end.
             assets = @assets.concat @assets[0] if options.provider is 'rackspace'
             async.forEachSeries assets, (asset, next) =>
-                stream = null
+                readStream = null
                 headers = {}
                 gzipped = false
                 if asset.gzip
-                    stream = new BufferStream asset.gzipContents
+                    readStream = new BufferStream asset.gzipContents
                     headers['content-encoding'] = 'gzip'
                     gzipped = true
                 else
-                    stream = new BufferStream asset.contents
+                    readStream = new BufferStream asset.contents
                 url = asset.getUploadUrl()
                 for key, value of asset.headers
                     headers[key] = value
@@ -162,12 +162,15 @@ class exports.Rack extends EventEmitter
                     container: options.container
                     remote: url
                     headers: headers
-                    stream: stream
 
                 console.log('uploading ' + (gzipped ? '(gzipped)' : '') +
                   ' asset with url: ' + url)
 
-                client.upload(clientOptions)
+                writeStream = client.upload(clientOptions)
+                writeStream.on 'error', (error) ->
+                    return next error if error?
+                    next()
+                readStream.pipe(writeStream)
             , (error) =>
                 if error?
                     console.error "Deployment Error: ", error
