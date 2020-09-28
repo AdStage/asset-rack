@@ -167,9 +167,7 @@ class exports.Rack extends EventEmitter
                 console.log('uploading ' + (gzipped ? '(gzipped)' : '') +
                   ' asset with url: ' + url)
 
-                client.upload clientOptions, (error) ->
-                    return next error if error?
-                    next()
+                client.upload(clientOptions)
             , (error) =>
                 if error?
                     console.error "Deployment Error: ", error
